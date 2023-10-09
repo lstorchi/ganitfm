@@ -27,6 +27,7 @@ def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[List[int], Lis
     return labels, data
 
 
+"""
 class Generator(nn.Module):
 
     def __init__(self, input_length: int):
@@ -48,7 +49,6 @@ class Discriminator(nn.Module):
     def forward(self, x):
         return self.activation(self.dense(x))
 
-"""
 import torch
 import torch.nn as nn
 
