@@ -47,7 +47,8 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.activation(self.dense(x))
-    
+
+"""
 import torch
 import torch.nn as nn
 
@@ -99,7 +100,7 @@ def train(max_int: int = 128, batch_size: int = 16, training_steps: int = 500):
         discriminator_loss = (true_discriminator_loss + generator_discriminator_loss) / 2
         discriminator_loss.backward()
         discriminator_optimizer.step()
-
+"""
 
 if __name__ == "__main__":
     val = 1
