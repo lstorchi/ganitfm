@@ -2,7 +2,7 @@ import math
 import numpy as np
 
 import tensorflow as tf
-import keras_vis
+import tf_keras_vis
 
 from typing import List, Tuple
 
@@ -141,5 +141,5 @@ if __name__ == "__main__":
     gen_model = generator_model(10)
     dis_model = discriminator_model(10)
 
-    keras_vis.plot_model(gen_model, show_shapes=True)
-    keras_vis.plot_model(dis_model, show_shapes=True)
+    tf_keras_vis.plot_model(gen_model, show_shapes=True)
+    tf_keras_vis.plot_model(dis_model, show_shapes=True)
