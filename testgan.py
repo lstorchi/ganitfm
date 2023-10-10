@@ -1,16 +1,24 @@
 import math
 import numpy as np
 
+import tensorflow as tf
+import keras_vis
+
 from typing import List, Tuple
 
+##########################################################################################
+
 def create_binary_list_from_int(number: int) -> List[int]:
+
     if number < 0 or type(number) is not int:
         raise ValueError("Only Positive integers are allowed")
 
     return [int(x) for x in list(bin(number))[2:]]
 
+##########################################################################################
 
-def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[List[int], List[List[int]]]:
+def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[List[int], \
+                                                                  List[List[int]]]:
     # Get the number of binary places needed to represent the maximum number
     max_length = int(math.log(max_int, 2))
 
@@ -26,10 +34,32 @@ def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[List[int], Lis
 
     return labels, data
 
+##########################################################################################
+
+def discriminator_model (input_length: int):
+
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Dense(input_length, input_dim=input_length))
+    model.add(tf.keras.layers.LeakyReLU())
+    model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
+
+    return model    
+
+##########################################################################################
+
+def generator_model (input_length: int):
+
+    model = tf.keras.Sequential()
+    model.add(tf.keras.layers.Dense(input_length, input_dim=input_length))
+    model.add(tf.keras.layers.LeakyReLU())
+    model.add(tf.keras.layers.Dense(input_length, activation='sigmoid'))
+
+    return model
+
+##########################################################################################
 
 """
 class Generator(nn.Module):
-
     def __init__(self, input_length: int):
         super(Generator, self).__init__()
         self.dense_layer = nn.Linear(int(input_length), int(input_length))
@@ -39,7 +69,6 @@ class Generator(nn.Module):
         return self.activation(self.dense_layer(x))
     
 
-
 class Discriminator(nn.Module):
     def __init__(self, input_length: int):
         super(Discriminator, self).__init__()
@@ -48,10 +77,6 @@ class Discriminator(nn.Module):
 
     def forward(self, x):
         return self.activation(self.dense(x))
-
-import torch
-import torch.nn as nn
-
 
 def train(max_int: int = 128, batch_size: int = 16, training_steps: int = 500):
     input_length = int(math.log(max_int, 2))
@@ -109,6 +134,12 @@ if __name__ == "__main__":
 
     print(f"Binary representation of {val} is {lval}")
 
-    labels, data = generate_even_data(8, 3)
+    labels, data = generate_even_data(16, 100)
 
-    print(f"Labels: {labels}")
+    print(f"Labels: {labels}", "data: ", data)
+
+    gen_model = generator_model(10)
+    dis_model = discriminator_model(10)
+
+    keras_vis.plot_model(gen_model, show_shapes=True)
+    keras_vis.plot_model(dis_model, show_shapes=True)
