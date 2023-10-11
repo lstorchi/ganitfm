@@ -1,5 +1,6 @@
 import math
 import numpy as np
+import random
 
 import tensorflow as tf
 from tensorflow import keras
@@ -24,22 +25,40 @@ def create_binary_list_from_int(number: int) -> List[int]:
 
 ##########################################################################################
 
-def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[List[int], \
-                                                                  List[List[int]]]:
-    # Get the number of binary places needed to represent the maximum number
-    max_length = int(math.log(max_int, 2))
+def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[int, List[int], \
+                                                                  List[List[int]], \
+                                                                  List[int]]:
+    
+    gennum = 0
+    realvalue = []
+    labels = []
+    data = []
+    while gennum < batch_size:
+        s = random.randint(0, max_int)
+        if s % 2 == 0:
+            gennum += 1
+            realvalue.append(s)
+            labels.append(1)
+            data.append(create_binary_list_from_int(s))
+            #print(s, create_binary_list_from_int(s))
+        else:
+            continue
 
-    # Sample batch_size number of integers in range 0-max_int
-    sampled_integers = np.random.randint(0, int(max_int / 2), batch_size)
+    maxlen = 0
+    for d in data:
+        if maxlen < len(d):
+            maxlen = len(d)
+    
+    # nomalize to maxlen
+    retdata = []
+    for idx, d in enumerate(data):
+        if len(d) < maxlen:
+            rd = [0] * (maxlen - len(d)) + d
+            retdata.append(rd)
+        else:
+            retdata.append(d)
 
-    # create a list of labels all ones because all numbers are even
-    labels = [1] * batch_size
-
-    # Generate a list of binary numbers for training.
-    data = [create_binary_list_from_int(int(x * 2)) for x in sampled_integers]
-    data = [([0] * (max_length - len(x))) + x for x in data]
-
-    return labels, data
+    return maxlen, labels, retdata, realvalue
 
 ##########################################################################################
 
@@ -67,6 +86,22 @@ def generator_model (input_length: int):
 
 ##########################################################################################
 
+def discriminator_loss (real_output, fake_output):
+
+    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
+    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
+
+    return real_loss + fake_loss
+
+##########################################################################################
+
+def generator_loss (fake_output):
+
+    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+    
+    return cross_entropy(tf.ones_like(fake_output), fake_output)
+
+##########################################################################################
 """
 class Generator(nn.Module):
     def __init__(self, input_length: int):
@@ -137,21 +172,41 @@ def train(max_int: int = 128, batch_size: int = 16, training_steps: int = 500):
 """
 
 if __name__ == "__main__":
-    val = 1
+    
+    debug = False
 
-    lval = create_binary_list_from_int(val)
+    #val = 1
+    #lval = create_binary_list_from_int(val)
+    #print(f"Binary representation of {val} is {lval}")
 
-    print(f"Binary representation of {val} is {lval}")
+    inputsize, labels, data, realvalue = generate_even_data(1000, 100)
 
-    labels, data = generate_even_data(16, 100)
+    if debug:
+        for idx, d in enumerate(data):
+            print("Labels: %2d"%(labels[idx]), \
+                  "RealValue: %5d"%(realvalue[idx]), d)
 
-    print(f"Labels: {labels}", "data: ", data)
+    gen_model = generator_model(inputsize)
+    dis_model = discriminator_model(inputsize)
 
-    gen_model = generator_model(10)
-    dis_model = discriminator_model(10)
+    if debug:
+        #plot_model(gen_model, show_shapes=True)
+        #plot_model(dis_model, show_shapes=True)
+        ann_viz(gen_model, title="Generator Model", view=True, filename="gen_model.gv")
+        ann_viz(dis_model, title="Discriminator Model", view=True, filename="dis_model.gv")
 
-    #plot_model(gen_model, show_shapes=True)
-    #plot_model(dis_model, show_shapes=True)
 
-    ann_viz(gen_model, title="Generator Model", view=True, filename="gen_model.gv")
-    ann_viz(dis_model, title="Discriminator Model", view=True, filename="dis_model.gv")
+    # before training
+    for i in range(100):
+        noise = tf.random.uniform([1, inputsize], 0, 2)
+        print("Noise: ", np.array(noise)[0])
+        generated_data = gen_model(noise, training=False)
+        print("Generated: ", np.array(generated_data)[0])
+        disout = dis_model(generated_data, training=False)
+        print("Discriminator: ", np.array(disout)[0])
+
+    # training
+    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
+    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
+
+
