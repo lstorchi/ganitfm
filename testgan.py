@@ -88,6 +88,8 @@ def generator_model (input_length: int):
 
 def discriminator_loss (real_output, fake_output):
 
+    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
+
     real_loss = cross_entropy(tf.ones_like(real_output), real_output)
     fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
 
@@ -102,74 +104,36 @@ def generator_loss (fake_output):
     return cross_entropy(tf.ones_like(fake_output), fake_output)
 
 ##########################################################################################
-"""
-class Generator(nn.Module):
-    def __init__(self, input_length: int):
-        super(Generator, self).__init__()
-        self.dense_layer = nn.Linear(int(input_length), int(input_length))
-        self.activation = nn.Sigmoid()
 
-    def forward(self, x):
-        return self.activation(self.dense_layer(x))
-    
+def train_step (real_data, batch_size, inputsize, generator, discriminator, 
+                generator_loss, discriminator_loss ):
+    noise = tf.random.uniform([batch_size, inputsize], 0, 1)
 
-class Discriminator(nn.Module):
-    def __init__(self, input_length: int):
-        super(Discriminator, self).__init__()
-        self.dense = nn.Linear(int(input_length), 1);
-        self.activation = nn.Sigmoid()
+    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
+        fake_data = generator(noise, training=True)
 
-    def forward(self, x):
-        return self.activation(self.dense(x))
+        #print("Real Data: ", real_data)
+        #print("Fake Data: ", fake_data)
 
-def train(max_int: int = 128, batch_size: int = 16, training_steps: int = 500):
-    input_length = int(math.log(max_int, 2))
+        real_output = discriminator(real_data, training=True)
+        fake_output = discriminator(fake_data, training=True)
+        
+        gen_loss = generator_loss(fake_output)
+        disc_loss = discriminator_loss(real_output, fake_output)
 
-    # Models
-    generator = Generator(input_length)
-    discriminator = Discriminator(input_length)
+    gradients_of_generator = gen_tape.gradient(gen_loss,\
+                                                generator.trainable_variables)
+    gradients_of_discriminator = disc_tape.gradient(disc_loss, \
+                                                    discriminator.trainable_variables)
 
-    # Optimizers
-    generator_optimizer = torch.optim.Adam(generator.parameters(), lr=0.001)
-    discriminator_optimizer = torch.optim.Adam(discriminator.parameters(), lr=0.001)
+    generator_optimizer.apply_gradients(zip(gradients_of_generator,\
+                                             generator.trainable_variables))
+    discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator,\
+                                                 discriminator.trainable_variables))
 
-    # loss
-    loss = nn.BCELoss()
+    return 
 
-    for i in range(training_steps):
-        # zero the gradients on each iteration
-        generator_optimizer.zero_grad()
-
-        # Create noisy input for generator
-        # Need float type instead of int
-        noise = torch.randint(0, 2, size=(batch_size, input_length)).float()
-        generated_data = generator(noise)
-
-        # Generate examples of even real data
-        true_labels, true_data = generate_even_data(max_int, batch_size=batch_size)
-        true_labels = torch.tensor(true_labels).float()
-        true_data = torch.tensor(true_data).float()
-
-        # Train the generator
-        # We invert the labels here and don't train the discriminator because we want the generator
-        # to make things the discriminator classifies as true.
-        generator_discriminator_out = discriminator(generated_data)
-        generator_loss = loss(generator_discriminator_out, true_labels)
-        generator_loss.backward()
-        generator_optimizer.step()
-
-        # Train the discriminator on the true/generated data
-        discriminator_optimizer.zero_grad()
-        true_discriminator_out = discriminator(true_data)
-        true_discriminator_loss = loss(true_discriminator_out, true_labels)
-
-        # add .detach() here think about this
-        generator_discriminator_out = discriminator(generated_data.detach())
-        generator_discriminator_loss = loss(generator_discriminator_out, torch.zeros(batch_size))
-        discriminator_loss = (true_discriminator_loss + generator_discriminator_loss) / 2
-        discriminator_loss.backward()
-        discriminator_optimizer.step()
-"""
+##########################################################################################
 
 if __name__ == "__main__":
     
@@ -196,17 +160,48 @@ if __name__ == "__main__":
         ann_viz(dis_model, title="Discriminator Model", view=True, filename="dis_model.gv")
 
 
-    # before training
-    for i in range(100):
-        noise = tf.random.uniform([1, inputsize], 0, 2)
-        print("Noise: ", np.array(noise)[0])
-        generated_data = gen_model(noise, training=False)
-        print("Generated: ", np.array(generated_data)[0])
-        disout = dis_model(generated_data, training=False)
-        print("Discriminator: ", np.array(disout)[0])
+        # before training
+        for i in range(100):
+            noise = tf.random.uniform([1, inputsize], 0, 1)
+            print("Noise: ", np.array(noise)[0])
+            generated_data = gen_model(noise, training=False)
+            print(generated_data)
+            print("Generated: ", np.array(generated_data)[0])
+            disout = dis_model(generated_data, training=False)
+            print("Discriminator: ", np.array(disout)[0])
 
     # training
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 
+    batchsize = 5
+    epochs = 100
+
+    for epoch in range(epochs):
+        real_data = []
+        idx = 0
+        for d in data:
+            real_data.append(d)
+            idx += 1
+            if idx == batchsize:
+                idx = 0
+                #print(tf.convert_to_tensor(real_data))
+
+                t_real_data = tf.convert_to_tensor(real_data, dtype=tf.float32)
+
+                train_step(t_real_data, batchsize, inputsize, \
+                           gen_model, dis_model, \
+                           generator_loss, discriminator_loss)
+                
+                real_data.clear()
+
+
+    # before training
+    for i in range(100):
+        noise = tf.random.uniform([1, inputsize], 0, 1)
+        #print("Noise: ", np.array(noise)[0])
+        generated_data = gen_model(noise, training=False)
+        #print("Generated: ", np.array(generated_data)[0])
+        disout = dis_model.predict(generated_data)
+        print("Discriminator: ", disout)
 
