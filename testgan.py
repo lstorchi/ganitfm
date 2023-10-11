@@ -15,6 +15,31 @@ from ann_visualizer.visualize import ann_viz
 from typing import List, Tuple
 
 ##########################################################################################
+# Print iterations progress
+#https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
+def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, \
+                      length = 100, fill = '█', printEnd = "\r"):
+    """
+    Call in a loop to create terminal progress bar
+    @params:
+        iteration   - Required  : current iteration (Int)
+        total       - Required  : total iterations (Int)
+        prefix      - Optional  : prefix string (Str)
+        suffix      - Optional  : suffix string (Str)
+        decimals    - Optional  : positive number of decimals in percent complete (Int)
+        length      - Optional  : character length of bar (Int)
+        fill        - Optional  : bar fill character (Str)
+        printEnd    - Optional  : end character (e.g. "\r", "\r\n") (Str)
+    """
+    percent = ("{0:." + str(decimals) + "f}").format(100 * (iteration / float(total)))
+    filledLength = int(length * iteration // total)
+    bar = fill * filledLength + '-' * (length - filledLength)
+    print(f'\r{prefix} |{bar}| {percent}% {suffix}', end = printEnd)
+    # Print New Line on Complete
+    if iteration == total: 
+        print()
+
+##########################################################################################
 
 def create_binary_list_from_int(number: int) -> List[int]:
 
@@ -174,9 +199,24 @@ if __name__ == "__main__":
     generator_optimizer = tf.keras.optimizers.Adam(1e-4)
     discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
 
+    # before training
+    for i in range(5):
+        noise = tf.random.uniform([1, inputsize], 0, 1)
+        #print("Noise: ", np.array(noise)[0])
+        generated_data = gen_model(noise, training=False)
+        #print("Generated: ", np.array(generated_data)[0])
+        disout = dis_model.predict(generated_data)
+        print("Discriminator: ", disout)
+
+    #for d in data:
+    #    t_d = tf.convert_to_tensor([d], dtype=tf.float32)
+    #    disout = dis_model.predict(t_d)
+    #    print("Discriminator: ", disout)
+
     batchsize = 5
     epochs = 100
 
+    printProgressBar(0, epochs, prefix = 'Progress:', suffix = 'Complete', length = 50)
     for epoch in range(epochs):
         real_data = []
         idx = 0
@@ -194,10 +234,17 @@ if __name__ == "__main__":
                            generator_loss, discriminator_loss)
                 
                 real_data.clear()
+        
+        printProgressBar(epoch + 1, epochs, prefix = 'Progress:', \
+                         suffix = 'Complete', length = 50)
 
+    #for d in data:
+    #    t_d = tf.convert_to_tensor([d], dtype=tf.float32)
+    #    disout = dis_model.predict(t_d)
+    #    print("Discriminator: ", disout)
 
-    # before training
-    for i in range(100):
+    # after training
+    for i in range(5):
         noise = tf.random.uniform([1, inputsize], 0, 1)
         #print("Noise: ", np.array(noise)[0])
         generated_data = gen_model(noise, training=False)
