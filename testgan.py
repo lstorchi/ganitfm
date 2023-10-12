@@ -192,8 +192,8 @@ def summarize_performance(epoch : int , generator : tf.keras.Sequential , \
 ##########################################################################################
 
 def train(g_model : tf.keras.Sequential , d_model : tf.keras.Sequential , \
-        gan_model : tf.keras.Sequential , latent_dim : int , n_epochs : int =10000, \
-        n_batch : int =128, n_eval : int =2000):
+        gan_model : tf.keras.Sequential , latent_dim : int , n_epochs : int =20000, \
+        n_batch : int =128, n_eval : int =5000):
     
 	# determine half the size of one batch, for updating the discriminator
 	half_batch = int(n_batch / 2)
