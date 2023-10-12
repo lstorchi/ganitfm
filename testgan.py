@@ -8,7 +8,7 @@ from tensorflow.keras import Model
 
 from tensorflow.keras.utils import plot_model
 from tensorflow.keras.layers import Input, Dense, BatchNormalization
-from IPython.core.display import Image
+#from IPython.core.display import Image
 
 from ann_visualizer.visualize import ann_viz
 
