@@ -55,6 +55,7 @@ def generate_real_samples(n: int=100, xs:float = -0.5, xf: float = 0.5) -> \
 
     # generate random numbers between xs and xf
     X1 = np.random.rand(n) * (xf - xs) + xs
+    X1 = np.random.rand(n) - 0.5
     X2 = np.asanyarray([finafunction(x) for x in X1])
 	# stack arrays
     X1 = X1.reshape(n, 1)
@@ -83,7 +84,7 @@ def generate_random_samples(n: int=100, xs:float = -0.5, xf: float = 0.5,
 
 ##########################################################################################
 
-def discriminator_model (input_length: int):
+def discriminator_model (input_length: int) -> tf.keras.Sequential:
 
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Dense(25, activation='relu', \
@@ -98,10 +99,11 @@ def discriminator_model (input_length: int):
 
 ##########################################################################################
 
-def generator_model (input_length: int = 5, output_length: int = 2):
+def generator_model (input_length: int = 5, output_length: int = 2) -> tf.keras.Sequential:
 
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(15, kernel_initializer='he_uniform', \
+    model.add(tf.keras.layers.Dense(15, activation='relu', \
+                                    kernel_initializer='he_uniform', \
                                     input_dim=input_length)) 
     #model.add(tf.keras.layers.Dense(15, activation='linear'))
     #model.add(tf.keras.layers.Dense(15, activation='linear'))
@@ -111,7 +113,9 @@ def generator_model (input_length: int = 5, output_length: int = 2):
 
 ##########################################################################################
 
-def train_discriminator(model, n_epochs=1000, n_batch=128):
+def train_discriminator(model : tf.keras.Sequential , n_epochs : int  =1000, \
+                        n_batch : int  =128):
+    
     half_batch = int(n_batch / 2)
     # run epochs manually
     for i in range(n_epochs):
@@ -129,7 +133,7 @@ def train_discriminator(model, n_epochs=1000, n_batch=128):
 
 ##########################################################################################
 
-def generate_random_noise(latent_dim, n):
+def generate_random_noise(latent_dim : int , n : int) -> np.ndarray: 
     # generate points in the latent space
     x_input = np.random.randn(latent_dim * n)
     # reshape into a batch of inputs for the network
@@ -140,7 +144,9 @@ def generate_random_noise(latent_dim, n):
 ##########################################################################################
 
 # use the generator to generate n fake examples and plot the results
-def generate_fake_samples(generator, latent_dim, n):
+def generate_fake_samples(generator : tf.keras.Sequential, latent_dim : int , n : int ) \
+    -> Tuple[np.ndarray, np.ndarray] :
+
     # generate points in latent space
     x_input = generate_random_noise(latent_dim, n)
     X = generator.predict(x_input)
@@ -150,8 +156,9 @@ def generate_fake_samples(generator, latent_dim, n):
 
 ##########################################################################################
 
-def define_gan(generator, discriminator):
-    
+def define_gan(generator : tf.keras.Sequential , discriminator : tf.keras.Sequential ) \
+    -> tf.keras.Sequential:
+
     #pile up the two models
     discriminator.trainable = False
     model = tf.keras.Sequential()
@@ -163,7 +170,10 @@ def define_gan(generator, discriminator):
 
 ##########################################################################################
 
-def summarize_performance(epoch, generator, discriminator, latent_dim, n=100):
+def summarize_performance(epoch : int , generator : tf.keras.Sequential , \
+                        discriminator : tf.keras.Sequential , \
+                        latent_dim : int , n : int =100):
+     
 	# prepare real samples
 	x_real, y_real = generate_real_samples(n)
 	# evaluate discriminator on real examples
@@ -181,8 +191,10 @@ def summarize_performance(epoch, generator, discriminator, latent_dim, n=100):
 
 ##########################################################################################
 
-def train(g_model, d_model, gan_model, latent_dim, n_epochs=10000, n_batch=128, \
-          n_eval=2000):
+def train(g_model : tf.keras.Sequential , d_model : tf.keras.Sequential , \
+        gan_model : tf.keras.Sequential , latent_dim : int , n_epochs : int =10000, \
+        n_batch : int =128, n_eval : int =2000):
+    
 	# determine half the size of one batch, for updating the discriminator
 	half_batch = int(n_batch / 2)
 	# manually enumerate epochs
@@ -208,7 +220,7 @@ def train(g_model, d_model, gan_model, latent_dim, n_epochs=10000, n_batch=128, 
 
 if __name__ == "__main__":
     
-    debug = True
+    debug = False
     inputdim = 2
     randominputdim = 5
 
