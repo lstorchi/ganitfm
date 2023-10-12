@@ -101,9 +101,9 @@ def discriminator_model (input_length: int):
 def generator_model (input_length: int = 5, output_length: int = 2):
 
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(25, kernel_initializer='he_uniform', \
+    model.add(tf.keras.layers.Dense(15, kernel_initializer='he_uniform', \
                                     input_dim=input_length)) 
-    model.add(tf.keras.layers.Dense(15, activation='linear'))
+    #model.add(tf.keras.layers.Dense(15, activation='linear'))
     #model.add(tf.keras.layers.Dense(15, activation='linear'))
     model.add(tf.keras.layers.Dense(output_length, activation='linear'))
 
@@ -208,20 +208,14 @@ def train(g_model, d_model, gan_model, latent_dim, n_epochs=10000, n_batch=128, 
 
 if __name__ == "__main__":
     
-    debug = False
+    debug = True
     inputdim = 2
     randominputdim = 5
 
     if debug:
-        real_data = generate_real_samples(100, -5.0, 5.0)
-        fake_data = generate_random_noise (100, -5.0, 5.0, 0.0, 1.0)
+        real_data = generate_real_samples(100, -0.5, 0.5)
 
         plt.scatter(real_data[0][:, 0], real_data[0][:, 1])
-        plt.show()
-
-        plt.clf()
-
-        plt.scatter(fake_data[0][:, 0], fake_data[0][:, 1])
         plt.show()
 
     # define the discriminator model
