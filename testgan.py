@@ -54,7 +54,7 @@ def generate_real_samples(n: int=100, xs:float = -0.5, xf: float = 0.5) -> \
     Tuple[np.ndarray, np.ndarray]:   
 
     # generate random numbers between xs and xf
-    X1 = np.random.rand(n) * (xf - xs) + xs
+    #X1 = np.random.rand(n) * (xf - xs) + xs
     X1 = np.random.rand(n) - 0.5
     X2 = np.asanyarray([finafunction(x) for x in X1])
 	# stack arrays
