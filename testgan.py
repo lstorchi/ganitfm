@@ -14,6 +14,8 @@ from ann_visualizer.visualize import ann_viz
 
 from typing import List, Tuple
 
+from matplotlib import pyplot as plt
+
 ##########################################################################################
 # Print iterations progress
 #https://stackoverflow.com/questions/3173320/text-progress-bar-in-the-console
@@ -41,214 +43,211 @@ def printProgressBar (iteration, total, prefix = '', suffix = '', decimals = 1, 
 
 ##########################################################################################
 
-def create_binary_list_from_int(number: int) -> List[int]:
-
-    if number < 0 or type(number) is not int:
-        raise ValueError("Only Positive integers are allowed")
-
-    return [int(x) for x in list(bin(number))[2:]]
+def finafunction (x: float) -> float:
+        
+    #return 1.0 / (1.0 + math.exp(-x))  
+    return x*x
 
 ##########################################################################################
 
-def generate_even_data(max_int: int, batch_size: int=16) -> Tuple[int, List[int], \
-                                                                  List[List[int]], \
-                                                                  List[int]]:
-    
-    gennum = 0
-    realvalue = []
-    labels = []
-    data = []
-    while gennum < batch_size:
-        s = random.randint(0, max_int)
-        if s % 2 == 0:
-            gennum += 1
-            realvalue.append(s)
-            labels.append(1)
-            data.append(create_binary_list_from_int(s))
-            #print(s, create_binary_list_from_int(s))
-        else:
-            continue
+def generate_real_samples(n: int=100, xs:float = -0.5, xf: float = 0.5) -> \
+    Tuple[np.ndarray, np.ndarray]:   
 
-    maxlen = 0
-    for d in data:
-        if maxlen < len(d):
-            maxlen = len(d)
-    
-    # nomalize to maxlen
-    retdata = []
-    for idx, d in enumerate(data):
-        if len(d) < maxlen:
-            rd = [0] * (maxlen - len(d)) + d
-            retdata.append(rd)
-        else:
-            retdata.append(d)
+    # generate random numbers between xs and xf
+    X1 = np.random.rand(n) * (xf - xs) + xs
+    X2 = np.asanyarray([finafunction(x) for x in X1])
+	# stack arrays
+    X1 = X1.reshape(n, 1)
+    X2 = X2.reshape(n, 1)
+    y = np.ones((n, 1))
+    X = np.hstack((X1, X2))
 
-    return maxlen, labels, retdata, realvalue
+    return X, y
+
+##########################################################################################
+
+def generate_random_samples(n: int=100, xs:float = -0.5, xf: float = 0.5,
+                          ys: float = 0.0, yf : float = 0.25) -> \
+                            Tuple[np.ndarray, np.ndarray]:   
+
+    # generate random numbers between xs and xf
+    X1 = np.random.rand(n) * (xf - xs) + xs
+    X2 = np.random.rand(n) * (yf - ys) + ys
+	# stack arrays
+    X1 = X1.reshape(n, 1)
+    X2 = X2.reshape(n, 1)
+    y = np.zeros((n, 1))
+    X = np.hstack((X1, X2))
+
+    return X, y
 
 ##########################################################################################
 
 def discriminator_model (input_length: int):
 
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(input_length, activation='relu', \
+    model.add(tf.keras.layers.Dense(25, activation='relu', \
                                     input_dim=input_length))
-    #model.add(tf.keras.layers.LeakyReLU())
+    #model.add(tf.keras.layers.Dense(15, activation='relu'))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
+
+    model.compile(loss='binary_crossentropy', \
+                  optimizer='adam', metrics=['accuracy'])
 
     return model    
 
 ##########################################################################################
 
-def generator_model (input_length: int):
+def generator_model (input_length: int = 5, output_length: int = 2):
 
     model = tf.keras.Sequential()
-    model.add(tf.keras.layers.Dense(input_length, activation='relu', \
-                                    input_dim=input_length))
-    #model.add(tf.keras.layers.LeakyReLU())
-    model.add(tf.keras.layers.Dense(input_length, activation='sigmoid'))
+    model.add(tf.keras.layers.Dense(25, kernel_initializer='he_uniform', \
+                                    input_dim=input_length)) 
+    model.add(tf.keras.layers.Dense(15, activation='linear'))
+    #model.add(tf.keras.layers.Dense(15, activation='linear'))
+    model.add(tf.keras.layers.Dense(output_length, activation='linear'))
 
     return model
 
 ##########################################################################################
 
-def discriminator_loss (real_output, fake_output):
-
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-
-    real_loss = cross_entropy(tf.ones_like(real_output), real_output)
-    fake_loss = cross_entropy(tf.zeros_like(fake_output), fake_output)
-
-    return real_loss + fake_loss
-
-##########################################################################################
-
-def generator_loss (fake_output):
-
-    cross_entropy = tf.keras.losses.BinaryCrossentropy(from_logits=True)
-    
-    return cross_entropy(tf.ones_like(fake_output), fake_output)
-
-##########################################################################################
-
-def train_step (real_data, batch_size, inputsize, generator, discriminator, 
-                generator_loss, discriminator_loss ):
-    noise = tf.random.uniform([batch_size, inputsize], 0, 1)
-
-    with tf.GradientTape() as gen_tape, tf.GradientTape() as disc_tape:
-        fake_data = generator(noise, training=True)
-
-        #print("Real Data: ", real_data)
-        #print("Fake Data: ", fake_data)
-
-        real_output = discriminator(real_data, training=True)
-        fake_output = discriminator(fake_data, training=True)
+def train_discriminator(model, n_epochs=1000, n_batch=128):
+    half_batch = int(n_batch / 2)
+    # run epochs manually
+    for i in range(n_epochs):
+        # generate real examples
+        X_real, y_real = generate_real_samples(n = half_batch)
+        model.train_on_batch(X_real, y_real)
+        # generate fake examples
+        X_fake, y_fake = generate_fake_samples(n = half_batch)
+        model.train_on_batch(X_fake, y_fake)
+        # evaluate the model
+        _, acc_real = model.evaluate(X_real, y_real, verbose=0)
+        _, acc_fake = model.evaluate(X_fake, y_fake, verbose=0)
         
-        gen_loss = generator_loss(fake_output)
-        disc_loss = discriminator_loss(real_output, fake_output)
+        print("Epoch: %6d %10.6f %10.6f"%(i, acc_real, acc_fake))
 
-    gradients_of_generator = gen_tape.gradient(gen_loss,\
-                                                generator.trainable_variables)
-    gradients_of_discriminator = disc_tape.gradient(disc_loss, \
-                                                    discriminator.trainable_variables)
+##########################################################################################
 
-    generator_optimizer.apply_gradients(zip(gradients_of_generator,\
-                                             generator.trainable_variables))
-    discriminator_optimizer.apply_gradients(zip(gradients_of_discriminator,\
-                                                 discriminator.trainable_variables))
+def generate_random_noise(latent_dim, n):
+    # generate points in the latent space
+    x_input = np.random.randn(latent_dim * n)
+    # reshape into a batch of inputs for the network
+    x_input = x_input.reshape(n, latent_dim)
 
-    return 
+    return x_input
 
+##########################################################################################
+
+# use the generator to generate n fake examples and plot the results
+def generate_fake_samples(generator, latent_dim, n):
+    # generate points in latent space
+    x_input = generate_random_noise(latent_dim, n)
+    X = generator.predict(x_input)
+    y = np.zeros((n, 1))
+
+    return X, y
+
+##########################################################################################
+
+def define_gan(generator, discriminator):
+    
+    #pile up the two models
+    discriminator.trainable = False
+    model = tf.keras.Sequential()
+    model.add(generator)
+    model.add(discriminator)
+    model.compile(loss='binary_crossentropy', optimizer='adam')
+    
+    return model
+
+##########################################################################################
+
+def summarize_performance(epoch, generator, discriminator, latent_dim, n=100):
+	# prepare real samples
+	x_real, y_real = generate_real_samples(n)
+	# evaluate discriminator on real examples
+	_, acc_real = discriminator.evaluate(x_real, y_real, verbose=0)
+	# prepare fake examples
+	x_fake, y_fake = generate_fake_samples(generator, latent_dim, n)
+	# evaluate discriminator on fake examples
+	_, acc_fake = discriminator.evaluate(x_fake, y_fake, verbose=0)
+	# summarize discriminator performance
+	print(epoch, acc_real, acc_fake)
+	# scatter plot real and fake data points
+	plt.scatter(x_real[:, 0], x_real[:, 1], color='red')
+	plt.scatter(x_fake[:, 0], x_fake[:, 1], color='blue')
+	plt.show()
+
+##########################################################################################
+
+def train(g_model, d_model, gan_model, latent_dim, n_epochs=10000, n_batch=128, \
+          n_eval=2000):
+	# determine half the size of one batch, for updating the discriminator
+	half_batch = int(n_batch / 2)
+	# manually enumerate epochs
+	for i in range(n_epochs):
+		# prepare real samples
+		x_real, y_real = generate_real_samples(n=half_batch)
+		# prepare fake examples
+		x_fake, y_fake = generate_fake_samples(g_model, latent_dim, half_batch)
+		# update discriminator
+		d_model.train_on_batch(x_real, y_real)
+		d_model.train_on_batch(x_fake, y_fake)
+		# prepare points in latent space as input for the generator
+		x_gan = generate_random_noise(latent_dim, n_batch)
+		# create inverted labels for the fake samples
+		y_gan = np.ones((n_batch, 1))
+		# update the generator via the discriminator's error
+		gan_model.train_on_batch(x_gan, y_gan)
+		# evaluate the model every n_eval epochs
+		if (i+1) % n_eval == 0:
+			summarize_performance(i, g_model, d_model, latent_dim)
+               
 ##########################################################################################
 
 if __name__ == "__main__":
     
     debug = False
-
-    #val = 1
-    #lval = create_binary_list_from_int(val)
-    #print(f"Binary representation of {val} is {lval}")
-
-    inputsize, labels, data, realvalue = generate_even_data(1000, 100)
+    inputdim = 2
+    randominputdim = 5
 
     if debug:
-        for idx, d in enumerate(data):
-            print("Labels: %2d"%(labels[idx]), \
-                  "RealValue: %5d"%(realvalue[idx]), d)
+        real_data = generate_real_samples(100, -5.0, 5.0)
+        fake_data = generate_random_noise (100, -5.0, 5.0, 0.0, 1.0)
 
-    gen_model = generator_model(inputsize)
-    dis_model = discriminator_model(inputsize)
+        plt.scatter(real_data[0][:, 0], real_data[0][:, 1])
+        plt.show()
 
+        plt.clf()
+
+        plt.scatter(fake_data[0][:, 0], fake_data[0][:, 1])
+        plt.show()
+
+    # define the discriminator model
+    discriminator = discriminator_model(inputdim)
+    # train the discriminator model
+    #train_discriminator(discriminator, 1000, 128)
+    generator = generator_model(randominputdim, inputdim)
+    # test model generation
+    #generator_fake_samples(generator, randominputdim, 100)
+    # define the gan model
+    gan_model = define_gan(generator, discriminator)
+
+    train(generator, discriminator, gan_model, randominputdim)
+
+    # summarize the model
     if debug:
-        #plot_model(gen_model, show_shapes=True)
-        #plot_model(dis_model, show_shapes=True)
-        ann_viz(gen_model, title="Generator Model", view=True, filename="gen_model.gv")
-        ann_viz(dis_model, title="Discriminator Model", view=True, filename="dis_model.gv")
-
-
-        # before training
-        for i in range(100):
-            noise = tf.random.uniform([1, inputsize], 0, 1)
-            print("Noise: ", np.array(noise)[0])
-            generated_data = gen_model(noise, training=False)
-            print(generated_data)
-            print("Generated: ", np.array(generated_data)[0])
-            disout = dis_model(generated_data, training=False)
-            print("Discriminator: ", np.array(disout)[0])
-
-    # training
-    generator_optimizer = tf.keras.optimizers.Adam(1e-4)
-    discriminator_optimizer = tf.keras.optimizers.Adam(1e-4)
-
-    # before training
-    for i in range(5):
-        noise = tf.random.uniform([1, inputsize], 0, 1)
-        #print("Noise: ", np.array(noise)[0])
-        generated_data = gen_model(noise, training=False)
-        #print("Generated: ", np.array(generated_data)[0])
-        disout = dis_model.predict(generated_data)
-        print("Discriminator: ", disout)
-
-    #for d in data:
-    #    t_d = tf.convert_to_tensor([d], dtype=tf.float32)
-    #    disout = dis_model.predict(t_d)
-    #    print("Discriminator: ", disout)
-
-    batchsize = 5
-    epochs = 100
-
-    printProgressBar(0, epochs, prefix = 'Progress:', suffix = 'Complete', length = 50)
-    for epoch in range(epochs):
-        real_data = []
-        idx = 0
-        for d in data:
-            real_data.append(d)
-            idx += 1
-            if idx == batchsize:
-                idx = 0
-                #print(tf.convert_to_tensor(real_data))
-
-                t_real_data = tf.convert_to_tensor(real_data, dtype=tf.float32)
-
-                train_step(t_real_data, batchsize, inputsize, \
-                           gen_model, dis_model, \
-                           generator_loss, discriminator_loss)
-                
-                real_data.clear()
+        #discriminator.summary()
+        #plot_model(discriminator, to_file='discriminator_plot.png', \
+        #           show_shapes=True, show_layer_names=True)
+        ann_viz(discriminator, title="Discriminator Model",\
+                 view=True, filename="dis_model.gv")
+        ann_viz(generator, title="Generator Model",\
+                 view=True, filename="gen_model.gv")
+        gan_model.summary()
+        plot_model(gan_model, to_file='gan_plot.png', show_shapes=True, show_layer_names=True)
         
-        printProgressBar(epoch + 1, epochs, prefix = 'Progress:', \
-                         suffix = 'Complete', length = 50)
 
-    #for d in data:
-    #    t_d = tf.convert_to_tensor([d], dtype=tf.float32)
-    #    disout = dis_model.predict(t_d)
-    #    print("Discriminator: ", disout)
 
-    # after training
-    for i in range(5):
-        noise = tf.random.uniform([1, inputsize], 0, 1)
-        #print("Noise: ", np.array(noise)[0])
-        generated_data = gen_model(noise, training=False)
-        #print("Generated: ", np.array(generated_data)[0])
-        disout = dis_model.predict(generated_data)
-        print("Discriminator: ", disout)
 
