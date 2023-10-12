@@ -240,6 +240,8 @@ if __name__ == "__main__":
     # define the gan model
     gan_model = define_gan(generator, discriminator)
 
+    summarize_performance(0, generator, discriminator, randominputdim)
+
     train(generator, discriminator, gan_model, randominputdim)
 
     # summarize the model
