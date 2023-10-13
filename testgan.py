@@ -88,6 +88,7 @@ def discriminator_model (input_length: int) -> tf.keras.Sequential:
 
     model = tf.keras.Sequential()
     model.add(tf.keras.layers.Dense(25, activation='relu', \
+                                    kernel_initializer='he_uniform', \
                                     input_dim=input_length))
     #model.add(tf.keras.layers.Dense(15, activation='relu'))
     model.add(tf.keras.layers.Dense(1, activation='sigmoid'))
